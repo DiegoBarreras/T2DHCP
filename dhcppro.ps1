@@ -1,5 +1,5 @@
 param(
-    [Parameter(Position=0)]
+    [Parameter(Position=0, ValueFromRemainingArguments=$true)]
     [string]$opcion
 )
 
@@ -336,7 +336,8 @@ switch ($opcion) {
             if ($resGw -eq "s") {
                 $final = Read-Host "Inserta la direccion IP para el Gateway: $prefijo."
                 $gateway = "$prefijo.$final"
-                
+                Write-Host "$gateway"
+
                 if (-not (validacionIP $gateway) -or -not (validarNoAptos $gateway $claseIP)) {
                     Write-Host "Inserta un Gateway valido."
                     continue
