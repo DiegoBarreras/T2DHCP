@@ -374,35 +374,110 @@ subnet $subnet netmask $mask {
 EOF
 
 	                if [[ $? -eq 0 ]]; then
-	                        echo "El archivo fue guardado correctamente."
+	                        echo -e "El archivo fue guardado correctamente.\n"
 	                        systemctl restart dhcpd
-				exit 0
+
 	                else
 	                        echo "Archivo no guardado. Revisa los permisos."
 	                        exit 1
 	                fi
 		else
-			echo "Error: No se encuentra el archivo /etc/dhcp/dhcpd.conf. Por favor instala el paquete dhcp-server, o bien crea el archivo."
-			exit 1
+			echo "El archivo dhcpd.conf no fue encontrado.."
+                        exit 1
 		fi
 
-	;;
+		while true; do
+
+			read -p "Inserta una nueva IP para el servidor: $prefijo." finNuevaIp
+			nuevaIp="${prefijo}.${finNuevaIp}"
+
+			if ! validacionIP "$nuevaIp" || ! validarNoAptos "$nuevaIp"; then
+	                	echo "Inserta una direccion IP valida."
+	                        continue
+			else
+                		case $claseIP in
+                                	"a")
+						valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f2) * 65536 + $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
+						if [[ $valNuevaIp -lt $valIniA || $valNuevaIp -gt $valFinA ]]; then
+							echo "La IP insertada es valida."
+							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/24
+							sudo nmcli con mod "red_interna" ipv4.method manual
+							sudo nmcli con up "red_interna"
+							echo "Direccion IP actualizada exitosamente."
+							sudo firewall-cmd --add-service=dhcp --permanent
+                                                        sudo firewall-cmd --reload
+							break
+						else
+							echo "Inserta una direccion fuera del rango."
+							continue
+						fi
+						;;
+
+					"b")
+                                                valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
+                                                if [[ $valNuevaIp -lt $valIniB || $valNuevaIp -gt $valFinB ]]; then
+                                                        echo "La IP insertada es valida."
+							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/16
+                                                        sudo nmcli con mod "red_interna" ipv4.method manual
+                                                        sudo nmcli con up "red_interna"
+                                                        echo "Direccion IP actualizada exitosamente."
+							sudo firewall-cmd --add-service=dhcp --permanent
+                                                        sudo firewall-cmd --reload
+							break
+
+                                                else
+                                                        echo "Inserta una direccion fuera del rango."
+							continue
+                                                fi
+                                                ;;
+
+					"c")
+                                                valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f4) ))
+                                                if [[ $valNuevaIp -lt $(echo $limInicial | cut -d. -f4) || $valNuevaIp -gt $(echo $limFinal | cut -d. -f4) ]]; then
+                                                        echo "La IP insertada es valida."
+							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/8
+                                                        sudo nmcli con mod "red_interna" ipv4.method manual
+                                                        sudo nmcli con up "red_interna"
+                                                        echo "Direccion IP actualizada exitosamente."
+							sudo firewall-cmd --add-service=dhcp --permanent
+							sudo firewall-cmd --reload
+							break
+                                                else
+                                                        echo "Inserta una direccion fuera del rango."
+                                                        continue
+                                                fi
+                                                ;;
+				esac
+			fi
+		done
+		;;
+
+	-restartserv)
+                echo -e "Validando configuración antes de reiniciar...\n"
+                dhcpd -t -cf /etc/dhcp/dhcpd.conf > /tmp/dhcp_error 2>&1
+                
+                if [[ $? -ne 0 ]]; then
+                        echo "¡Error de sintaxis detectado!"
+                        cat /tmp/dhcp_error | grep "line" 
+                        exit 1
+                fi
+
+                echo "Sintaxis OK. Reiniciando servicio..."
+                systemctl restart dhcpd
+                
+                if [[ $? -eq 0 ]]; then
+                        echo "Servicio iniciado correctamente."
+                        exit 0
+                else
+                        echo "Error crítico: El servicio no pudo iniciar a pesar de tener sintaxis correcta."
+                        journalctl -u dhcpd -n 10 --no-pager
+                        exit 1
+                fi
+        ;;
 
 	-verconfig)
 		echo -e "Configuracion actual:\n"
 		sudo cat /etc/dhcp/dhcpd.conf
-	;;
-
-	-restartserv)
-		echo -e "Reiniciando servicio...\n"
-		systemctl restart dhcpd
-		if [[ $? -eq 0 ]]; then
-		        echo "Servicio iniciado correctamente."
-			exit 0
-		else
-		        echo "Error al iniciar el servicio. Revisa la sintaxis en /etc/dhcp/dhcpd.conf, o bien instala el servicio."
-			exit 1
-		fi
 	;;
 
 	-monitor)
@@ -417,7 +492,6 @@ EOF
                 if [[ -f "/var/lib/dhcpd/dhcpd.leases" ]]; then
                         echo "El archivo dhcpd.leases fue encontrado.\n"
 		        if [ -s /var/lib/dhcpd/dhcpd.leases ]; then
-		        	# Filtramos para mostrar solo IP, MAC y Nombre de equipo
 		        	sudo cat /var/lib/dhcpd/dhcpd.leases
 		    	else
 		        	echo "No hay concesiones activas actualmente."
