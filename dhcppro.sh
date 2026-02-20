@@ -396,11 +396,11 @@ EOF
 	                        continue
 			else
                 		case $claseIP in
-                                	"a")
+                    "a")
 						valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f2) * 65536 + $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
 						if [[ $valNuevaIp -lt $valIniA || $valNuevaIp -gt $valFinA ]]; then
 							echo "La IP insertada es valida."
-							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/24
+							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/8
 							sudo nmcli con mod "red_interna" ipv4.method manual
 							sudo nmcli con up "red_interna"
 							echo "Direccion IP actualizada exitosamente."
@@ -435,7 +435,7 @@ EOF
                                                 valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f4) ))
                                                 if [[ $valNuevaIp -lt $(echo $limInicial | cut -d. -f4) || $valNuevaIp -gt $(echo $limFinal | cut -d. -f4) ]]; then
                                                         echo "La IP insertada es valida."
-							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/8
+							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/24
                                                         sudo nmcli con mod "red_interna" ipv4.method manual
                                                         sudo nmcli con up "red_interna"
                                                         echo "Direccion IP actualizada exitosamente."
