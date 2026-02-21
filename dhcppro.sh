@@ -309,7 +309,7 @@ case $1 in
                         if [[ $resDns == "s" ]]; then
 				read -p "Inserta la direccion IP para el DNS Server: " dns
 
-				if ! validacionIP "$dns" || ! validarNoAptos "$dns" || [[ "$dns" == "$gateway" ]]; then
+				if ! validacionIP "$dns"; then
                                         echo "Inserta una direccion valida."
                                         continue
 				else
@@ -318,7 +318,7 @@ case $1 in
 		                        if [[ $resDns2 == "s" ]]; then
 		                                read -p "Inserta la direccion IP para el DNS Server: " dns2
 
-		                                if ! validacionIP "$dns2" || ! validarNoAptos "$dns2" || [[ "$dns2" == "$gateway" ]]; then
+		                                if ! validacionIP "$dns2"; then
 		                                        echo "Inserta una direccion valida."
 		                                        continue
 		                                else
@@ -364,18 +364,18 @@ case $1 in
 cat <<EOF | sudo tee /etc/dhcp/dhcpd.conf > /dev/null
 ddns-update-style none;
 authoritative;
+$dnsLinea
 
 subnet $subnet netmask $mask {
     range $limInicial $limFinal;
     $gwLinea
-    $dnsLinea
     default-lease-time $segLease;
 }
 EOF
 
 	                if [[ $? -eq 0 ]]; then
 	                        echo -e "El archivo fue guardado correctamente.\n"
-	                        systemctl restart dhcpd
+	                        sudo systemctl restart dhcpd
 
 	                else
 	                        echo "Archivo no guardado. Revisa los permisos."
@@ -463,7 +463,7 @@ EOF
                 fi
 
                 echo "Sintaxis OK. Reiniciando servicio..."
-                systemctl restart dhcpd
+                sudo systemctl restart dhcpd
                 
                 if [[ $? -eq 0 ]]; then
                         echo "Servicio iniciado correctamente."
