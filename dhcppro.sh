@@ -83,10 +83,10 @@ if [[ $# -eq 0 ]]; then
 	echo -e "./dhcppro.sh -verconfig\n"
 
 	echo -e "Para reiniciar el servicio:"
-        echo -e "./dhcppro.sh -restartserv\n"
+    echo -e "./dhcppro.sh -restartserv\n"
 
-        echo -e "Monitor de concesiones:"
-        echo -e "./dhcppro.sh -monitor\n"
+    echo -e "Monitor de concesiones:"
+    echo -e "./dhcppro.sh -monitor\n"
 fi
 
 
@@ -398,7 +398,7 @@ EOF
                 		case $claseIP in
                     "a")
 						valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f2) * 65536 + $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
-						if [[ $valNuevaIp -lt $valIniA || $valNuevaIp -gt $valFinA ]]; then
+						if [[ $valNuevaIp -le $valIniA || $valNuevaIp -ge $valFinA ]]; then
 							echo "La IP insertada es valida."
 							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/8
 							sudo nmcli con mod "red_interna" ipv4.method manual
@@ -415,7 +415,7 @@ EOF
 
 					"b")
                                                 valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
-                                                if [[ $valNuevaIp -lt $valIniB || $valNuevaIp -gt $valFinB ]]; then
+                                                if [[ $valNuevaIp -le $valIniB || $valNuevaIp -ge $valFinB ]]; then
                                                         echo "La IP insertada es valida."
 							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/16
                                                         sudo nmcli con mod "red_interna" ipv4.method manual
@@ -433,7 +433,7 @@ EOF
 
 					"c")
                                                 valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f4) ))
-                                                if [[ $valNuevaIp -lt $(echo $limInicial | cut -d. -f4) || $valNuevaIp -gt $(echo $limFinal | cut -d. -f4) ]]; then
+                                                if [[ $valNuevaIp -le $(echo $limInicial | cut -d. -f4) || $valNuevaIp -ge $(echo $limFinal | cut -d. -f4) ]]; then
                                                         echo "La IP insertada es valida."
 							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/24
                                                         sudo nmcli con mod "red_interna" ipv4.method manual
