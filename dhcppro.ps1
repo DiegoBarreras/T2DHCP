@@ -149,6 +149,7 @@ switch ($opcion) {
             Write-Host "Instalando el paquete dhcp-server.`n"
             Install-WindowsFeature -Name DHCP -IncludeManagementTools
             Add-DhcpServerSecurityGroup
+            netsh dhcp add server $env:COMPUTERNAME 127.0.0.1
             exit 0
         }
         else {
@@ -516,7 +517,7 @@ switch ($opcion) {
                     "a" {
                         $octNueva = $nuevaIp.Split('.')
                         $valNuevaIp = [int]$octNueva[1] * 65536 + [int]$octNueva[2] * 256 + [int]$octNueva[3]
-                        if ($valNuevaIp -lt $valIniA -or $valNuevaIp -gt $valFinA) {
+                        if ($valNuevaIp -le $valIniA -or $valNuevaIp -ge $valFinA) {
                             Write-Host "La IP insertada es valida."
                             Remove-NetIPAddress -InterfaceAlias "Ethernet" -Confirm:$false -ErrorAction SilentlyContinue
                             New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress $nuevaIp -PrefixLength 8
@@ -532,7 +533,7 @@ switch ($opcion) {
                     "b" {
                         $octNueva = $nuevaIp.Split('.')
                         $valNuevaIp = [int]$octNueva[2] * 256 + [int]$octNueva[3]
-                        if ($valNuevaIp -lt $valIniB -or $valNuevaIp -gt $valFinB) {
+                        if ($valNuevaIp -le $valIniB -or $valNuevaIp -ge $valFinB) {
                             Write-Host "La IP insertada es valida."
                             Remove-NetIPAddress -InterfaceAlias "Ethernet" -Confirm:$false -ErrorAction SilentlyContinue
                             New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress $nuevaIp -PrefixLength 16
@@ -548,7 +549,7 @@ switch ($opcion) {
                     "c" {
                         $octNueva = $nuevaIp.Split('.')
                         $valNuevaIp = [int]$octNueva[3]
-                        if ($valNuevaIp -lt [int]($limInicial.Split('.')[3]) -or $valNuevaIp -gt [int]($limFinal.Split('.')[3])) {
+                        if ($valNuevaIp -le [int]($limInicial.Split('.')[3]) -or $valNuevaIp -ge [int]($limFinal.Split('.')[3])) {
                             Write-Host "La IP insertada es valida."
                             Remove-NetIPAddress -InterfaceAlias "Ethernet" -Confirm:$false -ErrorAction SilentlyContinue
                             New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress $nuevaIp -PrefixLength 24
