@@ -1,9 +1,9 @@
-. "$PSScriptRoot\funciones.ps1"
-
 param(
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]]$args
 )
+
+. "$PSScriptRoot\funciones.ps1"
 
 $opcion = if ($args) { $args[0] } else { $null }
 
