@@ -1,68 +1,4 @@
-validacionIP() {
-        local ip=$1
-        local regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-        if [[ $ip =~ $regex ]]; then
-                return 0
-        else
-                return 1
-        fi
-}
-
-sacarMascara() {
-        local ip=$1
-        local octComp=$(echo $ip | cut -d. -f1)
-
-        if (($octComp <= "126" && $octComp >= "1")); then
-                mask="255.0.0.0"
-                return 0
-        elif (($octComp >= "128" && $octComp <= "191")); then
-                mask="255.255.0.0"
-                return 0
-        elif (($octComp >= "192" && $octComp <= "223")); then
-                mask="255.255.255.0"
-		return 0
-        else
-                return 1
-        fi
-}
-
-validarMascara() {
-	if [[ $mask == "255.0.0.0" && $claseIP != "a" ]]; then
-                return 1
-	elif [[ $mask == "255.255.0.0" && $claseIP != "b" ]]; then
-                return 1
-	elif [[ $mask == "255.255.255.0" && $claseIP != "c" ]]; then
-                return 1
-	else
-		return 0
-	fi
-}
-
-validarNoAptos() {
-	local ip=$1
-
-	if [[ $(echo $ip | cut -d. -f1) == "127" ]]; then
-		return 1
-	elif [[ $claseIP == "a" ]]; then
-		if [[ $(echo $ip | cut -d. -f2-4) == "0.0.0" || $(echo $ip | cut -d. -f2-4) == "255.255.255" ]]; then
-			return 1
-		else
-			return 0
-		fi
-	elif [[ $claseIP == "b" ]]; then
-                if [[ $(echo $ip | cut -d. -f3-4) == "0.0" || $(echo $ip | cut -d. -f3-4) == "255.255" ]]; then
-                        return 1
-		else
-			return 0
-                fi
-        elif [[ $claseIP == "c" ]]; then
-                if [[ $(echo $ip | cut -d. -f4) == "0" || $(echo $ip | cut -d. -f4) == "255" ]]; then
-                        return 1
-		else
-			return 0
-                fi
-	fi
-}
+source "$(dirname "$0")/funciones.sh"
 
 if [[ $# -eq 0 ]]; then
 	echo -e "\n"
@@ -71,71 +7,60 @@ if [[ $# -eq 0 ]]; then
 	echo -e "---------------------------------------------\n"
 
 	echo -e "Para verificar la instalacion del paquete:"
-	echo -e "./dhcppro.sh -verificar\n"
+	echo -e "./dhcppro.sh --verificar\n"
 
 	echo -e "Para re/instalar el paquete:"
-	echo -e "./dhcppro.sh -instalar\n"
+	echo -e "./dhcppro.sh --instalar\n"
 
 	echo -e "Para escribir una nueva configuracion al archivo dhcpd.conf:"
-	echo -e "./dhcppro.sh -newconfig\n"
+	echo -e "./dhcppro.sh --newconfig\n"
 
 	echo -e "Para mostrar la configuracion actual:"
 	echo -e "./dhcppro.sh -verconfig\n"
 
 	echo -e "Para reiniciar el servicio:"
-    echo -e "./dhcppro.sh -restartserv\n"
+	echo -e "./dhcppro.sh --restartserv\n"
 
-    echo -e "Monitor de concesiones:"
-    echo -e "./dhcppro.sh -monitor\n"
+	echo -e "Monitor de concesiones:"
+	echo -e "./dhcppro.sh --monitor\n"
 fi
 
-
 case $1 in
-	-verificar)
+	--verificar)
 		echo "Buscando al paquete dhcp-server:"
-
-		if rpm -q dhcp-server &> /dev/null; then
-			echo -e "El paquete fue instalado previamente.\n";
-		else
-			echo -e "El paquete no ha sido instalado.\n"
-		fi
+		verificar_paquete "dhcp-server"
 		exit 0
 	;;
 
-	-instalar)
-		if rpm -q dhcp-server &> /dev/null; then
-                        echo -e "El paquete fue instalado previamente.";
-                else
-                        echo -e "El paquete no ha sido instalado."
-                fi
-
+	--instalar)
+		verificar_paquete "dhcp-server"
 		read -p "Deseas instalar/reinstalar el paquete? s/n " res
-                res=${res,,}
-                if [[ $res == "s" ]]; then
-                	echo -e "Instalando el paquete dhcp-server.\n"
-                        sudo dnf install -y dhcp-server
+		res=${res,,}
+		if [[ $res == "s" ]]; then
+			echo -e "Instalando el paquete dhcp-server.\n"
+			sudo dnf install -y dhcp-server
 			exit 0
-                else
-                        echo -e "La instalacion fue cancelada.\n"
+		else
+			echo -e "La instalacion fue cancelada.\n"
 			exit 0
-                 fi
+		fi
 	;;
-	-newconfig)
-                while true; do
-                        read -p "Inserta el nombre del Scope para el DHCP: " nomScope
-                        if [[ -z "$nomScope" ]]; then
-                        echo "Inserta un nombre para el Scope."; continue
-                        else
-                                echo -e "\n"
-                                break
-                        fi
-                done
+
+	--newconfig)
+		while true; do
+			read -p "Inserta el nombre del Scope para el DHCP: " nomScope
+			if [[ -z "$nomScope" ]]; then
+				echo "Inserta un nombre para el Scope."; continue
+			else
+				echo -e "\n"
+				break
+			fi
+		done
 
 		while true; do
 			read -p "Inserta el tipo de clase para el rango de direcciones IP: (A, B, C) " claseIP
 			claseIP=${claseIP,,}
-
-			if [[ $claseIP != "a"  && $claseIP != "b" && $claseIP != "c" ]]; then
+			if [[ $claseIP != "a" && $claseIP != "b" && $claseIP != "c" ]]; then
 				echo "Inserta una clase valida."
 				continue
 			else
@@ -167,32 +92,32 @@ case $1 in
 		done
 
 		while true; do
-		        read -p "Inserta el limite final del rango de direcciones IP: " limFinal
-		        if validacionIP "$limFinal"; then
+			read -p "Inserta el limite final del rango de direcciones IP: " limFinal
+			if validacionIP "$limFinal"; then
 				case $claseIP in
 					"a")
 						if [[ $(echo $limInicial | cut -d. -f1) == $(echo $limFinal | cut -d. -f1) ]]; then
-                                                	valIniA=$(( $(echo $limInicial | cut -d. -f2) * 65536 + $(echo $limInicial | cut -d. -f3) * 256 + $(echo $limInicial | cut -d. -f4) ))
-                                                        valFinA=$(( $(echo $limFinal | cut -d. -f2) * 65536 + $(echo $limFinal | cut -d. -f3) * 256 + $(echo $limFinal | cut -d. -f4) ))
-                                                        if [[ $valIniA -lt $valFinA ]]; then
+							valIniA=$(calcular_valor_ip "$limInicial" "a")
+							valFinA=$(calcular_valor_ip "$limFinal" "a")
+							if [[ $valIniA -lt $valFinA ]]; then
 								prefijo=$(echo $limInicial | cut -d. -f1)
 								subnet=$(echo "$prefijo.0.0.0")
-                                                                echo -e "\n"
-                                                                break
-                                                        else
-                                                                echo "Inserta una direccion mayor a la especificada previamente."
-                                                                continue
-                                                        fi
-                                        	else
-                                                	echo "Inserta una direccion IP con un prefijo valido."
-                                                	continue
-                                        	fi
+								echo -e "\n"
+								break
+							else
+								echo "Inserta una direccion mayor a la especificada previamente."
+								continue
+							fi
+						else
+							echo "Inserta una direccion IP con un prefijo valido."
+							continue
+						fi
 						;;
 
 					"b")
 						if [[ $(echo $limInicial | cut -d. -f1-2) == $(echo $limFinal | cut -d. -f1-2) ]]; then
-                                                	valIniB=$(( $(echo $limInicial | cut -d. -f3) * 256 + $(echo $limInicial | cut -d. -f4) ))
-							valFinB=$(( $(echo $limFinal | cut -d. -f3) * 256 + $(echo $limFinal | cut -d. -f4) ))
+							valIniB=$(calcular_valor_ip "$limInicial" "b")
+							valFinB=$(calcular_valor_ip "$limFinal" "b")
 							if [[ $valIniB -lt $valFinB ]]; then
 								prefijo=$(echo $limInicial | cut -d. -f1-2)
 								subnet=$(echo "$prefijo.0.0")
@@ -202,10 +127,10 @@ case $1 in
 								echo "Inserta una direccion mayor a la especificada previamente."
 								continue
 							fi
-                                        	else
-                                                	echo "Inserta una direccion IP con un prefijo valido."
-                                                	continue
-                                        	fi
+						else
+							echo "Inserta una direccion IP con un prefijo valido."
+							continue
+						fi
 						;;
 
 					"c")
@@ -219,10 +144,10 @@ case $1 in
 								echo "Inserta una direccion mayor a la especificada previamente."
 								continue
 							fi
-                                        	else
-                                                	echo "Inserta una direccion IP con un prefijo valido."
-                                                	continue
-                                        	fi
+						else
+							echo "Inserta una direccion IP con un prefijo valido."
+							continue
+						fi
 						;;
 				esac
 			else
@@ -232,17 +157,17 @@ case $1 in
 		done
 
 		while true; do
-		        read -p "Inserta el Lease Time (Segundos): " segLease
-		        if [[ -z "$segLease" ]]; then
-		        	echo "Inserta el Lease Time.";
+			read -p "Inserta el Lease Time (Segundos): " segLease
+			if [[ -z "$segLease" ]]; then
+				echo "Inserta el Lease Time."
 				continue
-		        elif [[ $segLease =~ ^[0-9]+$ ]]; then
+			elif [[ $segLease =~ ^[0-9]+$ ]]; then
 				echo -e "\n"
 				break
 			else
-		                echo "Inserta un numero."
+				echo "Inserta un numero."
 				continue
-		        fi
+			fi
 		done
 
 		oct4Fin=$(echo $limFinal | cut -d. -f4)
@@ -250,9 +175,8 @@ case $1 in
 		while true; do
 			read -p "Deseas insertar una direccion IP especifica para el Gateway? s/n " resGw
 			resGw=${resGw,,}
-			if [[ $resGw == "s" ]]; then 
+			if [[ $resGw == "s" ]]; then
 				read -p "Inserta la direccion IP para el Gateway: $prefijo." final
-
 				gateway="${prefijo}.${final}"
 
 				if ! validacionIP "$gateway" || ! validarNoAptos "$gateway"; then
@@ -260,40 +184,17 @@ case $1 in
 					continue
 				fi
 
-				case $claseIP in
-                                        "a")
-                                                valGwA=$(( $(echo $gateway | cut -d. -f2) * 65536 + $(echo $gateway | cut -d. -f3) * 256 + $(echo $gateway | cut -d. -f4) ))
-                                                if [[ $valGwA -lt $valIniA || $valGwA -gt $valFinA ]]; then
-                                                        echo -e "\n"
-                                                        break
-                                                else
-                                                        echo "Inserta una direccion fuera del rango previamente establecido."
-                                                        continue
-                                                fi
-                                                ;;
+				valGw=$(calcular_valor_ip "$gateway" "$claseIP")
+				valIni=$(calcular_valor_ip "$limInicial" "$claseIP")
+				valFin=$(calcular_valor_ip "$limFinal" "$claseIP")
 
-                                        "b")
-                                                valGwB=$(( $(echo $gateway | cut -d. -f3) * 256 + $(echo $gateway | cut -d. -f4) ))
-                                                if [[ $valGwB -lt $valIniB || $valGwB -gt $valFinB ]]; then
-                                                        echo -e "\n"
-                                                        break
-                                                else
-                                                        echo "Inserta una direccion fuera del rango previamente establecido."
-                                                        continue
-                                                fi
-                                                ;;
-
-                                        "c")
-                                                valGwC=$(( $(echo $gateway | cut -d. -f4) ))
-                                                if [[ $valGwC -lt $(echo $limInicial | cut -d. -f4) || $valGwC -gt $(echo $limFinal | cut -d. -f4) ]]; then
-                                                        echo -e "\n"
-                                                        break
-                                                else
-                                                        echo "Inserta una direccion fuera del rango previamente establecido."
-                                                        continue
-                                                fi
-                                                ;;
-                                esac
+				if [[ $valGw -lt $valIni || $valGw -gt $valFin ]]; then
+					echo -e "\n"
+					break
+				else
+					echo "Inserta una direccion fuera del rango previamente establecido."
+					continue
+				fi
 			elif [[ $resGw == "n" ]]; then
 				echo -e "\n"
 				break
@@ -304,35 +205,33 @@ case $1 in
 		done
 
 		while true; do
-                        read -p "Deseas insertar una direccion IP especifica para el DNS Server? s/n " resDns
-                        resDns=${resDns,,}
-                        if [[ $resDns == "s" ]]; then
+			read -p "Deseas insertar una direccion IP especifica para el DNS Server? s/n " resDns
+			resDns=${resDns,,}
+			if [[ $resDns == "s" ]]; then
 				read -p "Inserta la direccion IP para el DNS Server: " dns
-
 				if ! validacionIP "$dns"; then
-                                        echo "Inserta una direccion valida."
-                                        continue
+					echo "Inserta una direccion valida."
+					continue
 				else
 					read -p "Deseas insertar una direccion IP secundaria para el DNS Server? s/n " resDns2
-		                        resDns2=${resDns2,,}
-		                        if [[ $resDns2 == "s" ]]; then
-		                                read -p "Inserta la direccion IP para el DNS Server: " dns2
-
-		                                if ! validacionIP "$dns2"; then
-		                                        echo "Inserta una direccion valida."
-		                                        continue
-		                                else
-		                                        echo -e "\n"
-		                                        break
-		                                fi
-		                        elif [[ $resDns2 == "n" ]]; then
-		                                echo -e "\n"
-		                                break
-		                        else
-		                                echo "Inserta una opcion valida."
-		                                continue
-		                        fi
-                                fi
+					resDns2=${resDns2,,}
+					if [[ $resDns2 == "s" ]]; then
+						read -p "Inserta la direccion IP para el DNS Server: " dns2
+						if ! validacionIP "$dns2"; then
+							echo "Inserta una direccion valida."
+							continue
+						else
+							echo -e "\n"
+							break
+						fi
+					elif [[ $resDns2 == "n" ]]; then
+						echo -e "\n"
+						break
+					else
+						echo "Inserta una opcion valida."
+						continue
+					fi
+				fi
 			elif [[ $resDns == "n" ]]; then
 				echo -e "\n"
 				break
@@ -343,10 +242,10 @@ case $1 in
 		done
 
 		if [[ -z "$gateway" ]]; then
-                	gwLinea="# No se configuro el Gateway."
-                else
-                	gwLinea="option routers $gateway;"
-                fi
+			gwLinea="# No se configuro el Gateway."
+		else
+			gwLinea="option routers $gateway;"
+		fi
 
 		if [[ -z "$dns" ]]; then
 			dnsLinea="# No se configuro el DNS."
@@ -354,133 +253,83 @@ case $1 in
 			if [[ -z "$dns2" ]]; then
 				dnsLinea="option domain-name-servers $dns;"
 			else
-		        	dnsLinea="option domain-name-servers $dns, $dns2;"
-		        fi
+				dnsLinea="option domain-name-servers $dns, $dns2;"
+			fi
 		fi
 
 		if [[ -f "/etc/dhcp/dhcpd.conf" ]]; then
-		    	echo "El archivo dhcpd.conf fue encontrado. Guardando... "
-
-cat <<EOF | sudo tee /etc/dhcp/dhcpd.conf > /dev/null
-ddns-update-style none;
-authoritative;
-$dnsLinea
-
-subnet $subnet netmask $mask {
-    range $limInicial $limFinal;
-    $gwLinea
-    default-lease-time $segLease;
-}
-EOF
-
-	                if [[ $? -eq 0 ]]; then
-	                        echo -e "El archivo fue guardado correctamente.\n"
-	                        sudo systemctl restart dhcpd
-
-	                else
-	                        echo "Archivo no guardado. Revisa los permisos."
-	                        exit 1
-	                fi
+			echo "El archivo dhcpd.conf fue encontrado. Guardando... "
+			escribir_config_dhcp
+			if [[ $? -eq 0 ]]; then
+				echo -e "El archivo fue guardado correctamente.\n"
+				sudo systemctl restart dhcpd
+			else
+				echo "Archivo no guardado. Revisa los permisos."
+				exit 1
+			fi
 		else
 			echo "El archivo dhcpd.conf no fue encontrado.."
-                        exit 1
+			exit 1
 		fi
 
 		while true; do
-
 			read -p "Inserta una nueva IP para el servidor: $prefijo." finNuevaIp
 			nuevaIp="${prefijo}.${finNuevaIp}"
 
 			if ! validacionIP "$nuevaIp" || ! validarNoAptos "$nuevaIp"; then
-	                	echo "Inserta una direccion IP valida."
-	                        continue
+				echo "Inserta una direccion IP valida."
+				continue
 			else
-                		case $claseIP in
-                    "a")
-						valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f2) * 65536 + $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
-						if [[ $valNuevaIp -le $valIniA || $valNuevaIp -ge $valFinA ]]; then
-							echo "La IP insertada es valida."
-							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/8
-							sudo nmcli con mod "red_interna" ipv4.method manual
-							sudo nmcli con up "red_interna"
-							echo "Direccion IP actualizada exitosamente."
-							sudo firewall-cmd --add-service=dhcp --permanent
-                                                        sudo firewall-cmd --reload
-							break
-						else
-							echo "Inserta una direccion fuera del rango."
-							continue
-						fi
-						;;
+				valNuevaIp=$(calcular_valor_ip "$nuevaIp" "$claseIP")
+				valIni=$(calcular_valor_ip "$limInicial" "$claseIP")
+				valFin=$(calcular_valor_ip "$limFinal" "$claseIP")
 
-					"b")
-                                                valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f3) * 256 + $(echo $nuevaIp | cut -d. -f4) ))
-                                                if [[ $valNuevaIp -le $valIniB || $valNuevaIp -ge $valFinB ]]; then
-                                                        echo "La IP insertada es valida."
-							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/16
-                                                        sudo nmcli con mod "red_interna" ipv4.method manual
-                                                        sudo nmcli con up "red_interna"
-                                                        echo "Direccion IP actualizada exitosamente."
-							sudo firewall-cmd --add-service=dhcp --permanent
-                                                        sudo firewall-cmd --reload
-							break
-
-                                                else
-                                                        echo "Inserta una direccion fuera del rango."
-							continue
-                                                fi
-                                                ;;
-
-					"c")
-                                                valNuevaIp=$(( $(echo $nuevaIp | cut -d. -f4) ))
-                                                if [[ $valNuevaIp -le $(echo $limInicial | cut -d. -f4) || $valNuevaIp -ge $(echo $limFinal | cut -d. -f4) ]]; then
-                                                        echo "La IP insertada es valida."
-							sudo nmcli con mod "red_interna" ipv4.addresses $nuevaIp/24
-                                                        sudo nmcli con mod "red_interna" ipv4.method manual
-                                                        sudo nmcli con up "red_interna"
-                                                        echo "Direccion IP actualizada exitosamente."
-							sudo firewall-cmd --add-service=dhcp --permanent
-							sudo firewall-cmd --reload
-							break
-                                                else
-                                                        echo "Inserta una direccion fuera del rango."
-                                                        continue
-                                                fi
-                                                ;;
+				case $claseIP in
+					"a") cidr=8 ;;
+					"b") cidr=16 ;;
+					"c") cidr=24 ;;
 				esac
+
+				if [[ $valNuevaIp -le $valIni || $valNuevaIp -ge $valFin ]]; then
+					aplicar_ip_servidor "$nuevaIp" "$cidr"
+					break
+				else
+					echo "Inserta una direccion fuera del rango."
+					continue
+				fi
 			fi
 		done
 		;;
 
-	-restartserv)
-                echo -e "Validando configuración antes de reiniciar...\n"
-                dhcpd -t -cf /etc/dhcp/dhcpd.conf > /tmp/dhcp_error 2>&1
-                
-                if [[ $? -ne 0 ]]; then
-                        echo "¡Error de sintaxis detectado!"
-                        cat /tmp/dhcp_error | grep "line" 
-                        exit 1
-                fi
+	--restartserv)
+		echo -e "Validando configuración antes de reiniciar...\n"
+		dhcpd -t -cf /etc/dhcp/dhcpd.conf > /tmp/dhcp_error 2>&1
 
-                echo "Sintaxis OK. Reiniciando servicio..."
-                sudo systemctl restart dhcpd
-                
-                if [[ $? -eq 0 ]]; then
-                        echo "Servicio iniciado correctamente."
-                        exit 0
-                else
-                        echo "Error crítico: El servicio no pudo iniciar a pesar de tener sintaxis correcta."
-                        journalctl -u dhcpd -n 10 --no-pager
-                        exit 1
-                fi
-        ;;
+		if [[ $? -ne 0 ]]; then
+			echo "¡Error de sintaxis detectado!"
+			cat /tmp/dhcp_error | grep "line"
+			exit 1
+		fi
 
-	-verconfig)
+		echo "Sintaxis OK. Reiniciando servicio..."
+		sudo systemctl restart dhcpd
+
+		if [[ $? -eq 0 ]]; then
+			echo "Servicio iniciado correctamente."
+			exit 0
+		else
+			echo "Error crítico: El servicio no pudo iniciar a pesar de tener sintaxis correcta."
+			journalctl -u dhcpd -n 10 --no-pager
+			exit 1
+		fi
+	;;
+
+	--verconfig)
 		echo -e "Configuracion actual:\n"
 		sudo cat /etc/dhcp/dhcpd.conf
 	;;
 
-	-monitor)
+	--monitor)
 		echo -e "\nEstado del servicio:"
 		if systemctl is-active dhcpd > /dev/null; then
 			echo -e "El servicio esta activo.\n"
@@ -489,22 +338,22 @@ EOF
 		fi
 
 		echo -e "\nConcesiones activas:"
-                if [[ -f "/var/lib/dhcpd/dhcpd.leases" ]]; then
-                        echo "El archivo dhcpd.leases fue encontrado.\n"
-		        if [ -s /var/lib/dhcpd/dhcpd.leases ]; then
-		        	sudo cat /var/lib/dhcpd/dhcpd.leases
-		    	else
-		        	echo "No hay concesiones activas actualmente."
+		if [[ -f "/var/lib/dhcpd/dhcpd.leases" ]]; then
+			echo "El archivo dhcpd.leases fue encontrado.\n"
+			if [ -s /var/lib/dhcpd/dhcpd.leases ]; then
+				sudo cat /var/lib/dhcpd/dhcpd.leases
+			else
+				echo "No hay concesiones activas actualmente."
 			fi
-                else
-                        echo "Error: No se encuentra el archivo /var/lib/dhcpd/dhcpd.leases. Por favor instala el paquete dhcp-server, o bien crea el archivo."
-                fi
+		else
+			echo "Error: No se encuentra el archivo /var/lib/dhcpd/dhcpd.leases. Por favor instala el paquete dhcp-server, o bien crea el archivo."
+		fi
 
 		echo -e "\nValidación de sintaxis de dhcpd.conf:"
 		sudo dhcpd -t -cf /etc/dhcp/dhcpd.conf &> /dev/null
 		if [ $? -eq 0 ]; then
 			echo "La sintaxis de dhcpd.conf es CORRECTA"
 		else
-		        echo "La sintaxis de dhcpd.conf es ERRONEA"
+			echo "La sintaxis de dhcpd.conf es ERRONEA"
 		fi
 esac
