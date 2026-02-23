@@ -106,3 +106,4 @@ subnet $subnet netmask $mask {
     default-lease-time $segLease;
 }
 EOF
+}
