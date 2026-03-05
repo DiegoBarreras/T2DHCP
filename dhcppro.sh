@@ -302,6 +302,7 @@ case $1 in
 		;;
 
 	--restartserv)
+		sudo systemctl start dhcpd
 		echo -e "Validando configuración antes de reiniciar...\n"
 		dhcpd -t -cf /etc/dhcp/dhcpd.conf > /tmp/dhcp_error 2>&1
 
